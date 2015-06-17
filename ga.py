@@ -3,6 +3,8 @@
 import numpy as np
 from neural_network import NN
 from TicTacToe import TicTacToe
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pylab as pl
 from multiprocessing import Process, Pool, Queue
 import os
@@ -227,7 +229,7 @@ def tournament(q,matches,N,*f):
 
         results[r1] += result[0]
         results[r2] += result[1]
-        if float(i) == 0.1*float(N):
+        if i%int(0.1*float(N))==0:
             print "%s Completed %d of %d matches"%(os.getpid(), i,N)
         
     q.put( results )
@@ -239,8 +241,16 @@ if __name__ == '__main__':
 
     allstars = []
     players = []
-    numOfPlayers = 1000
-    N = numOfPlayers*10
+
+
+    # Config options for 
+    
+    threads = 8
+    gamesPerPlayer = 200
+    numOfPlayers = 10000
+    generations = 1000
+
+    N = numOfPlayers*gamesPerPlayer/threads
     
     for i in range(numOfPlayers):
         players.append( Player() )
@@ -248,12 +258,12 @@ if __name__ == '__main__':
     q = Queue()
 
     try:
-        for generation in range(100):
+        for generation in range(generations):
             #tournament(players, N)
 
             processes = []
             print "Start processes"
-            for i in range(4):
+            for i in range(threads):
                 matches = np.random.random((N,3))
                 p = Process( target=tournament, args=(q,matches,N,players), name=str(i) )
                 p.start()
@@ -316,7 +326,8 @@ if __name__ == '__main__':
     data = np.array( data )
     data.dump( "fitnessReport.dat" )
     pl.plot( data[:,0], data[:,1] )
-    pl.show()
+    #pl.show()
+    pl.savefig('evolution_results')
 
 
 
