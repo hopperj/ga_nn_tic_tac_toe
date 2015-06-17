@@ -6,7 +6,7 @@ from TicTacToe import TicTacToe
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pylab as pl
-from multiprocessing import Process, Pool, Queue
+from multiprocessing import Process, Pool, Queue, Pipe
 import os
 
 
@@ -31,6 +31,8 @@ class Player:
     def getFitness(self):
         #return 1.0 - float(self.losses)/float(self.totalGames)
         #return float(3*self.wins+2*self.ties)/float(self.totalGames)
+        if self.totalGames == 0:
+            return 0.0
         return float(3*self.wins+2*self.ties-2*self.losses)/float(self.totalGames)
     
     def lookAtBoard(self, input_board):
@@ -97,7 +99,7 @@ def mate(p1, p2):
             nihw[i:n] = ihw2[i:n]
         if r>=0.8:
             for j in range(i,n):
-                nihw[j] = np.random.random() - 0.5
+                nihw[j] = 2.0*np.random.random() - 1.0
         i=n
 
     nihw = nihw.reshape( p1.brain.getIHW().shape )
@@ -213,7 +215,7 @@ def playAGame(p1, p2):
 
 
 
-def tournament(q,matches,N,*f):
+def tournament(q,matches,N,child_conn,*f):
     f=f[0]
 
     
@@ -232,7 +234,10 @@ def tournament(q,matches,N,*f):
         if i%int(0.1*float(N))==0:
             print "%s Completed %d of %d matches"%(os.getpid(), i,N)
         
-    q.put( results )
+    #q.put( results )
+    child_conn.send(results)
+    print "%s Completed %d matches"%(os.getpid(),N)
+    return
 
 
     
@@ -245,10 +250,10 @@ if __name__ == '__main__':
 
     # Config options for 
     
-    threads = 8
-    gamesPerPlayer = 200
-    numOfPlayers = 10000
-    generations = 1000
+    threads = 3
+    gamesPerPlayer = 10
+    numOfPlayers = 5000
+    generations = 200
 
     N = numOfPlayers*gamesPerPlayer/threads
     
@@ -256,7 +261,6 @@ if __name__ == '__main__':
         players.append( Player() )
 
     q = Queue()
-
     try:
         for generation in range(generations):
             #tournament(players, N)
@@ -265,17 +269,31 @@ if __name__ == '__main__':
             print "Start processes"
             for i in range(threads):
                 matches = np.random.random((N,3))
-                p = Process( target=tournament, args=(q,matches,N,players), name=str(i) )
+                parent_conn, child_conn = Pipe()
+                p = Process( target=tournament, args=(q,matches,N,child_conn,players), name=str(i) )
                 p.start()
-                processes.append(p)
-
-            print "Wait for completion"
-            for p in processes:
-                p.join()
-                print p.name,"completed"
+                processes.append( (p, parent_conn) )
+                print "Started process number:",i
 
             print "Clear Queue"
             tournamentResults = np.zeros( (numOfPlayers,3) )
+
+            print "Wait for completion"
+            while len(processes) > 0:
+                for i,p in enumerate(processes):
+                    #print "Waiting for:",p.name#,q.qsize()
+                    if p[1].poll(1):
+                        tournamentResults += p[1].recv()
+                        p[0].terminate()
+                        del processes[i]
+                    """
+                    p.join(1)
+                    if not p.is_alive():
+                        print p.name,"completed"
+                        tournamentResults += q.get()
+                        del processes[i]
+                    """
+
             while not q.empty():
                 tournamentResults += q.get()
 

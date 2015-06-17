@@ -56,11 +56,11 @@ class NN:
 
     def randomIHW(self):
         # Random numbers [-0.5, 0.5]
-        self.ihw = np.random.randn(self.num_inputs, self.num_hidden)-0.5
+        self.ihw = 2.0*np.random.randn(self.num_inputs, self.num_hidden)-1.0
 
     def randomHOW(self):
         # Random numbers [-0.5, 0.5]
-        self.how = np.random.randn(self.num_hidden, self.num_outputs)-0.5
+        self.how = 2.0*np.random.randn(self.num_hidden, self.num_outputs)-1.0
         
     def setIHW(self, weights):
         if weights.shape != self.ihw.shape or type(weights[0]) != float:
