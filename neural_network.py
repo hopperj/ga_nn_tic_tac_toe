@@ -31,17 +31,17 @@ class NN:
     def __init__(self, inputs=2, hidden=3, outputs=1, N=1.0e-1, max_itt=1e3):
         # Set default values
         self.threshold = 0.9
-        self.num_inputs = inputs
-        self.num_hidden = hidden
+        self.num_inputs = inputs+1
+        self.num_hidden = hidden+1
         self.num_outputs = outputs
         self.N = N
         self.max_itt = max_itt
         self.useThresholds = 0
         self.useSigmoid = 0
         
-        self.inputs = np.zeros((inputs,))
-        self.outputs = np.zeros((outputs,))
-        self.hidden = np.zeros((hidden,))
+        self.inputs = np.zeros((self.num_inputs,))
+        self.hidden = np.zeros((self.num_hidden,))
+        self.outputs = np.zeros((self.num_outputs,))
         
         # can randomize the initial weights to anything but from what I've
         # tried there really needs to be some negatives in there and its best
@@ -51,15 +51,15 @@ class NN:
         # d_ihw and d_how will be the summed changes in weights to be applied
         # after looping through each element in the training set. 
         # See theory for why it is done like this.
-        self.d_ihw = np.zeros((inputs, hidden))
-        self.d_how = np.zeros((hidden, outputs))
+        self.d_ihw = np.zeros((self.num_inputs, self.num_hidden))
+        self.d_how = np.zeros((self.num_hidden, self.num_outputs))
 
     def randomIHW(self):
-        # Random numbers [-0.5, 0.5]
+        # Random numbers [-1.0, 1.0]
         self.ihw = 2.0*np.random.randn(self.num_inputs, self.num_hidden)-1.0
 
     def randomHOW(self):
-        # Random numbers [-0.5, 0.5]
+        # Random numbers [-1.0, 1.0]
         self.how = 2.0*np.random.randn(self.num_hidden, self.num_outputs)-1.0
         
     def setIHW(self, weights):
@@ -108,8 +108,14 @@ class NN:
         self.hidden = np.zeros((self.num_hidden,))
                
     def run(self, inpt ):
-        self.input = np.array( inpt )
-        return self.feedforward()
+        self.reset_nodes()
+        self.inputs[:len(inpt)] = np.array( inpt )
+        #print self.inputs.shape
+        self.inputs[self.num_inputs-1] = 1.0
+        #print "Running:",self.input
+        ret = self.feedforward()
+        #print "Got:",ret
+        return ret
         
     def feedforward(self, ins=None):
         if ins is not None:
@@ -152,15 +158,16 @@ class NN:
         # Calculate all the hidden node errors and sum the hidden-->output
         # weight changes to be applied later
         for h in np.arange( self.num_hidden ):
-            self.d_how[h,:] += self.N*o_err*self.hidden[h]            
+            self.d_how[h,:] += o_err*self.hidden[h] # self.N*
             h_err[h] = self.dsigmoid(self.hidden[h])*np.sum(o_err*self.how[h,:])
         
         # Calculate and sum all the input-->hidden weights and apply later
         for i in np.arange( self.num_inputs ):
-            self.d_ihw[i,:] += self.N*h_err*self.inputs[i] 
+            self.d_ihw[i,:] += h_err*self.inputs[i] # self.N*
             
         # Return the sum of the absolute value of output node errors
-        return np.sum( np.abs( o_err ) )
+        #return np.sum( np.abs( o_err ) )
+        return np.sum( o_err )*self.N
             
     def update_weights(self):
         # Update all weights at once
@@ -171,7 +178,7 @@ class NN:
         self.d_how = np.zeros((self.num_hidden,self.num_outputs))
        
        
-    def train_network(self, training=None):
+    def train_network(self, X=None, Y=None):
         # should be a list of list pairs [ [inputs,outputs] ]
         i=0
         err = 0.0
@@ -179,18 +186,15 @@ class NN:
         # An array of indecies where we should print out the error status
         special = np.arange(1, self.max_itt, float(self.max_itt)/50.0 )
         # Begin training loop
-        while i < self.max_itt and i < self.max_itt:
+        errors = []
+        while i < self.max_itt:
             # reset current error
             err = 0.0
-            for ins, outs in training:
-                # Clear node energies
-                self.reset_nodes()
-                # double check inputs are numpy arrays
-                self.inputs = np.array( ins )
-                # Feed inputs through the system
-                self.feedforward()
+            for ins, outs in zip(X,Y):
+                
+                self.run( np.array( ins ) )
                 # Carry out backpropagation and keep track of the error sum
-                err += self.backpropagate( np.array(outs) )
+                err += abs( self.backpropagate( np.array(outs) ) )
             if i in special:
                 # Print out status
                 print "\033[1FError:",err," Is decreasing?",err < l_err,'       '
@@ -199,6 +203,10 @@ class NN:
             # Remember this error before it is reset so we know if the error
             # is decreasing
             l_err = err
+            # If the error is flat at 0, we are done!
+            errors.append(err)
+            #if err == 0.0 and l_err == 0.0:
+            #    break
             # increase counter
             i+=1
             # Check to see if the error has dropped below some point. If 
@@ -210,3 +218,42 @@ class NN:
             #    break
         print "Finished",i,'training loops.'
         print "Error:",err
+        return errors
+
+
+
+
+
+if __name__ == '__main__':
+    import numpy as np
+    from matplotlib import pylab as pl
+
+    xor_states = np.array( [ [0,0], [0,1], [1,1], [1,0] ] )
+    xor_outputs = np.array( [ 0, 1, 0, 1 ] )
+    
+    nn = NN(2,3,1)
+    nn.load()
+    nn.useThresholds = 0
+    nn.useSigmoid = 1
+    nn.max_itt = 100000
+    nn.N = 2.0e-10
+    errors = nn.train_network( X = xor_states, Y = xor_outputs )
+    print "Training complete"
+    nn.save()
+    nn.useThresholds=1
+    print "Running test:"
+    wrong = 0
+    right = 0
+    for i in range(xor_outputs.shape[0]):
+        res = nn.run(xor_states[i])
+        print res
+        print "Expected:",xor_outputs[i]
+        print "\n"
+        if res[0] == xor_outputs[i]:
+            right+=1
+        else:
+            wrong+=1
+
+    print "%d of %d correct"%(right,wrong+right)
+    pl.plot( range(len(errors)), errors)
+    pl.show()

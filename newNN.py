@@ -46,9 +46,9 @@ class NeuralNetwork:
             a = [X[i]]
 
             for l in range(len(self.weights)):
-                    dot_value = np.dot(a[l], self.weights[l])
-                    activation = self.activation(dot_value)
-                    a.append(activation)
+                dot_value = np.dot(a[l], self.weights[l])
+                activation = self.activation(dot_value)
+                a.append(activation)
             # output layer
             error = y[i] - a[-1]
             deltas = [error * self.activation_prime(a[-1])]
@@ -78,3 +78,6 @@ class NeuralNetwork:
         for l in range(0, len(self.weights)):
             a = self.activation(np.dot(a, self.weights[l]))
         return a
+
+
+

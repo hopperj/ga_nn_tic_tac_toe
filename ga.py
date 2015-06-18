@@ -47,7 +47,7 @@ class Player:
                 inputs[ 2*i ] = e
             if e<0:
                 inputs[ 2*i+1 ] = e
-        a = self.brain.feedforward( inputs )
+        a = self.brain.run( inputs )
         if DEBUG:
             print "Inputs:"
             print inputs,"\n"
@@ -215,7 +215,7 @@ def playAGame(p1, p2):
 
 
 
-def tournament(q,matches,N,child_conn,*f):
+def tournament(matches,N,child_conn,*f):
     f=f[0]
 
     
@@ -231,7 +231,7 @@ def tournament(q,matches,N,child_conn,*f):
 
         results[r1] += result[0]
         results[r2] += result[1]
-        if i%int(0.1*float(N))==0:
+        if i%int(0.1*float(N))==0 and DEBUG:
             print "%s Completed %d of %d matches"%(os.getpid(), i,N)
         
     #q.put( results )
@@ -251,8 +251,8 @@ if __name__ == '__main__':
     # Config options for 
     
     threads = 3
-    gamesPerPlayer = 10
-    numOfPlayers = 5000
+    gamesPerPlayer = 20
+    numOfPlayers = 100
     generations = 200
 
     N = numOfPlayers*gamesPerPlayer/threads
@@ -260,7 +260,6 @@ if __name__ == '__main__':
     for i in range(numOfPlayers):
         players.append( Player() )
 
-    q = Queue()
     try:
         for generation in range(generations):
             #tournament(players, N)
@@ -270,10 +269,11 @@ if __name__ == '__main__':
             for i in range(threads):
                 matches = np.random.random((N,3))
                 parent_conn, child_conn = Pipe()
-                p = Process( target=tournament, args=(q,matches,N,child_conn,players), name=str(i) )
+                p = Process( target=tournament, args=(matches,N,child_conn,players), name=str(i) )
                 p.start()
                 processes.append( (p, parent_conn) )
-                print "Started process number:",i
+                if DEBUG:
+                    print "Started process number:",i
 
             print "Clear Queue"
             tournamentResults = np.zeros( (numOfPlayers,3) )
@@ -293,10 +293,10 @@ if __name__ == '__main__':
                         tournamentResults += q.get()
                         del processes[i]
                     """
-
+            """
             while not q.empty():
                 tournamentResults += q.get()
-
+            """
 
             fitnessReport = []
                 
@@ -344,6 +344,7 @@ if __name__ == '__main__':
     data = np.array( data )
     data.dump( "fitnessReport.dat" )
     pl.plot( data[:,0], data[:,1] )
+    pl.title("Training error per epoch")
     #pl.show()
     pl.savefig('evolution_results')
 
