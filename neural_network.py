@@ -232,7 +232,7 @@ if __name__ == '__main__':
     xor_outputs = np.array( [ 0, 1, 0, 1 ] )
     
     nn = NN(2,3,1)
-    nn.load()
+    #nn.load()
     nn.useThresholds = 0
     nn.useSigmoid = 1
     nn.max_itt = 100000
