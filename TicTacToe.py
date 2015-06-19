@@ -63,13 +63,13 @@ class TicTacToe:
     def checkVictory(self):
         if np.all(self.board.T>0,-1).any() or np.all(self.board>0,-1).any() or np.diagonal(self.board>0).all() or np.diagonal(np.flipud(self.board>0)).all():
             #print "O won"
-            return True,'x'
+            return True
 
         if np.all(self.board.T<0,-1).any() or np.all(self.board<0,-1).any() or np.diagonal(self.board<0).all() or np.diagonal(np.flipud(self.board<0)).all():
             #print "X won"
-            return True,'o'
+            return True
 
-        return False,None
+        return False
 
         # check the diagonals
         #return np.diagonal(self.board).all() or np.diagonal(np.flipud(self.board)).all()

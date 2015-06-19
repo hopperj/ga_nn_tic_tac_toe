@@ -20,9 +20,9 @@ class Player:
         self.ties = 0
         self.totalGames = 0
 
-        self.brain = NN(2,3,1)#NN(18,18*2,9)
+        self.brain = NN(18,18*2,9)
         
-        self.brain.useThresholds = 1
+        self.brain.useThresholds = 0
         self.brain.useSigmoid = 1
         
 
@@ -64,9 +64,13 @@ class Player:
 
     
 def playerMove(player, game, mark):
-    res = player.lookAtBoard( game.board )#player.brain.feedforward( game.board.reshape(1,9) )
+    res = player.lookAtBoard( game.board )
     moves = [ list(res).index( e ) for e in sorted( res ) ]    
     # sort does lowest to highest, X wants highest first. O doesn't.
+    if mark=='o' and DEBUG:
+        print "Player:",mark
+        print game.printRawBoard()
+        print moves
     """
     if mark=='x':
         #print "reversing"        
@@ -112,7 +116,6 @@ def mate(p1, p2):
 
 
     i = 0
-    #for i in range( len(nihw) ):
     while i < len(nihw):
         r = np.random.random()
         n = np.random.randint(i,len(nihw)+1)
@@ -132,8 +135,6 @@ def mate(p1, p2):
     how2 = np.ravel(p2.brain.getHOW())
     nhow = np.ravel(np.array(p1.brain.getHOW()))
 
-    
-    #for i in range( len(nhow) ):
     i=0
     while i < len(nhow):
         r = np.random.random()
@@ -172,97 +173,62 @@ def mate(p1, p2):
 def playAGame(p1, p2):
     game = TicTacToe()
 
-    victory = [False, None]
+    victory = False
     turnNum = 0
 
     result = np.zeros( (2,3) )
     
-    while not victory[0]:
-
-
-        #print "Player 1:"
+    while not victory:
+        
         if not playerMove( p1, game, 'x' ):
             result[0][2] = 1
             result[1][2] = 1
-
-            #print "No victor!!"
-            #p1.ties+=1
-            #p2.ties+=1            
             break
-
-        
-        #game.printBoard()
         
         turnNum+=1
         if turnNum>=5:
             victory = game.checkVictory()
-        if victory[0]:
+        if victory:
             result[0][0] = 1
             result[1][1] = 1
-            #print "Player1 %c won!"%victory[1]
-            #p1.wins += 1
-            #p2.losses += 1
             break
 
+        #print "Turn:",turnNum, victory
 
-        #print "Player 2:"
+
         if not playerMove( p2, game, 'o' ):
             result[0][2] = 1
             result[1][2] = 1
-            #print "No victor!!"
-            #p1.ties+=1
-            #p2.ties+=1
             break
-
-        #game.printBoard()
     
         turnNum+=1
         if turnNum>=5:
             victory = game.checkVictory()
-        if victory[0]:
+        if victory:
             result[0][1] = 1
             result[1][0] = 1
-            
-            #print "Player2 %c won!"%victory[1]
-            #p2.wins += 1
-            #p1.losses += 1
             break
-        
-
-    #print "Gamove over"
-    #p1.totalGames += 1
-    #p2.totalGames += 1
-    
-    p1.brain.reset_nodes()
-    p2.brain.reset_nodes()
-
+    #print "Turn:",turnNum, victory
     return result
 
 
 
 def tournament(matches,N,child_conn,*f):
     f=f[0]
-
     
     results = np.zeros((len(f),3))
-    """
+    
     # Random tournament
     for i,e in enumerate(matches):
         r1 = int( e[0]*len(f) )
-        r2 = int( e[1]*len(f) )#np.random.randint(0, len(f) )
-        p1 = f[ r1 ]
-        p2 = f[ r2 ]
+        r2 = int( e[1]*len(f) )
 
-        result = np.array( playAGame(p1,p2) )
+        result = np.array( playAGame(f[ r1 ], f[ r2 ]) )
 
         results[r1] += result[0]
         results[r2] += result[1]
-        if i%int(0.1*float(N))==0 and DEBUG:
-            print "%s Completed %d of %d matches"%(os.getpid(), i,N)
-
-
-    """
-
+        #if i%int(0.1*float(N))==0 and DEBUG:
+        #    print "%s Completed %d of %d matches"%(os.getpid(), i,N)
 
     """
     # Every player playes every other player N times
@@ -274,6 +240,10 @@ def tournament(matches,N,child_conn,*f):
                 results[j] += result[1]
     """
 
+
+
+
+    """
     inputs = np.array( [ [0,0], [0,1], [1,1], [1,0] ] )
     outputs = np.array( [ 0, 1, 0, 1 ] )
 
@@ -287,7 +257,7 @@ def tournament(matches,N,child_conn,*f):
             else:
                 results[i][1] += 1
 
-    
+    """
             
                        
     #q.put( results )
@@ -306,10 +276,10 @@ if __name__ == '__main__':
 
     # Config options for 
     
-    threads = 2
+    threads = 1
     gamesPerPlayer = 10
-    numOfPlayers = 50
-    generations = 200
+    numOfPlayers = 1000
+    generations = 100
     breakEarly = 1
 
     
