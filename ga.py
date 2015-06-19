@@ -20,9 +20,9 @@ class Player:
         self.ties = 0
         self.totalGames = 0
 
-        self.brain = NN(18,18*2,9)
+        self.brain = NN(2,3,1)#NN(18,18*2,9)
         
-        self.brain.useThresholds = 0
+        self.brain.useThresholds = 1
         self.brain.useSigmoid = 1
         
 
@@ -217,7 +217,7 @@ def tournament(matches,N,child_conn,*f):
     f=f[0]
     
     results = np.zeros((len(f),3))
-    
+    """
     # Random tournament
     for i,e in enumerate(matches):
         r1 = int( e[0]*len(f) )
@@ -229,7 +229,7 @@ def tournament(matches,N,child_conn,*f):
         results[r2] += result[1]
         #if i%int(0.1*float(N))==0 and DEBUG:
         #    print "%s Completed %d of %d matches"%(os.getpid(), i,N)
-
+    """
     """
     # Every player playes every other player N times
     for n in range(N):
@@ -243,7 +243,7 @@ def tournament(matches,N,child_conn,*f):
 
 
 
-    """
+    
     inputs = np.array( [ [0,0], [0,1], [1,1], [1,0] ] )
     outputs = np.array( [ 0, 1, 0, 1 ] )
 
@@ -257,7 +257,7 @@ def tournament(matches,N,child_conn,*f):
             else:
                 results[i][1] += 1
 
-    """
+    
             
                        
     #q.put( results )
@@ -276,9 +276,9 @@ if __name__ == '__main__':
 
     # Config options for 
     
-    threads = 1
-    gamesPerPlayer = 10
-    numOfPlayers = 1000
+    threads = 2
+    gamesPerPlayer = 4
+    numOfPlayers = 50
     generations = 100
     breakEarly = 1
 

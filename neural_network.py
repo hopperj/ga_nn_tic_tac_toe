@@ -235,7 +235,7 @@ if __name__ == '__main__':
     #nn.load()
     nn.useThresholds = 0
     nn.useSigmoid = 1
-    nn.max_itt = 100000
+    nn.max_itt = 10000
     nn.N = 2.0e-10
     errors = nn.train_network( X = xor_states, Y = xor_outputs )
     print "Training complete"
